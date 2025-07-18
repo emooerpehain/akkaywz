@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Manager</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        :root {
+            --primary: #3498db;
+            --danger: #e74c3c;
+            --success: #2ecc71;
+            --dark: #2c3e50;
+            --light: #ecf0f1;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        
+        .login-container {
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .app-container {
+            display: none;
+            padding: 20px;
+        }
+        
+        .header {
+            background-color: var(--dark);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .logo i {
+            color: var(--primary);
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 25px;
+            color: var(--dark);
+            font-size: 32px;
+            position: relative;
+            padding-bottom: 15px;
+        }
+        
+        h1:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 4px;
+            background: var(--primary);
+            border-radius: 2px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            border: 1px solid #eee;
+        }
+        
+        .card-title {
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--dark);
+        }
+        
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border 0.3s;
+        }
+        
+        input:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+        
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        button:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        
+        button.delete {
+            background-color: var(--danger);
+        }
+        
+        button.list {
+            background-color: var(--success);
+        }
+        
+        button.logout {
+            background-color: var(--danger);
+            padding: 8px 15px;
+            font-size: 14px;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .result-container {
+            margin-top: 30px;
+        }
+        
+        #result {
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--primary);
+            padding: 20px;
+            border-radius: 0 8px 8px 0;
+            min-height: 100px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .database-list {
+            margin-top: 20px;
+        }
+        
+        .database-item {
+            padding: 12px 15px;
+            background-color: #f1f8ff;
+            border-left: 4px solid var(--primary);
+            margin-bottom: 10px;
+            border-radius: 0 5px 5px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .empty-db {
+            text-align: center;
+            padding: 30px;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            z-index: 1000;
+            transform: translateX(200%);
+            transition: transform 0.3s ease-out;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .notification.success {
+            background-color: var(--success);
+        }
+        
+        .notification.error {
+            background-color: var(--danger);
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+            }
+            
+            .login-container, .app-container {
+                padding: 20px;
+            }
+            
+            .actions {
+                flex-direction: column;
+            }
+            
+            button {
+                width: 100%;
+            }
+        }
+         /* Gaya baru untuk kontrol musik */
+        .music-control {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .music-control:hover {
+            transform: scale(1.1);
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .contact-dev {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: rgba(52, 152, 219, 0.1);
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .contact-dev a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .contact-dev a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+  <!-- Kontrol Musik -->
+    <div class="music-control" id="musicToggle">
+        <span id="musicIcon">🔇</span>
+    </div>
+    
+    <!-- Elemen Audio -->
+    <audio id="bgMusic" loop>
+        <source src="https://files.catbox.moe/thdbmd.mp3" type="audio/mpeg">
+        Browser Anda tidak mendukung elemen audio.
+    </audio>
+  <div class="container">
+        <!-- Login Screen -->
+        <div class="login-container" id="loginScreen">
+            <h1>Database Manager</h1>
+            <div class="card">
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="Masukkan password...">
+                </div>
+                <button onclick="login()">Masuk</button>
+            </div>
+            <p style="margin-top: 20px; color: #7f8c8d;">
+                Akses hanya untuk pengguna terotorisasi
+            </p>
+        </div>
+        <!-- Kontak Developer -->
+            <div class="contact-dev">
+                <p>Untuk bantuan, hubungi Developer:</p>
+                <a href="https://t.me/RafatharCode" target="_blank">t.me/RafatharCode</a>
+            </div>
+        </div>
+        <!-- Main App -->
+        <div class="app-container" id="appScreen">
+            <div class="header">
+                <div class="logo">
+                    <i>📊</i> <span>Database Manager</span>
+                </div>
+                <button class="logout" onclick="logout()">
+                    <i>🔒</i> Logout
+                </button>
+            </div>
+            
+            <div class="card">
+                <h2 class="card-title">Tambah Nomor ke Database</h2>
+                <div class="form-group">
+                    <label for="addNumber">Nomor (contoh: 6281234567890)</label>
+                    <input type="text" id="addNumber" placeholder="Masukkan nomor...">
+                </div>
+                <button onclick="addNumber()">Tambah Nomor</button>
+            </div>
+            
+            <div class="card">
+                <h2 class="card-title">Hapus Nomor dari Database</h2>
+                <div class="form-group">
+                    <label for="delNumber">Nomor (contoh: 6281234567890)</label>
+                    <input type="text" id="delNumber" placeholder="Masukkan nomor...">
+                </div>
+                <button class="delete" onclick="delNumber()">Hapus Nomor</button>
+            </div>
+            
+            <div class="card">
+                <h2 class="card-title">Manajemen Database</h2>
+                <div class="actions">
+                    <button class="list" onclick="listDatabase()">Tampilkan Database</button>
+                </div>
+                
+                <div class="result-container">
+                    <div id="result">Database akan ditampilkan di sini...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="notification" id="notification"></div>
+
+    <script>
+    // DOM Elements baru
+        const musicToggle = document.getElementById('musicToggle');
+        const musicIcon = document.getElementById('musicIcon');
+        const bgMusic = document.getElementById('bgMusic');
+        
+        // Status musik
+        let isMusicPlaying = false;
+        
+        // Fungsi untuk mengontrol musik
+        musicToggle.addEventListener('click', function() {
+            if (isMusicPlaying) {
+                bgMusic.pause();
+                musicIcon.textContent = '🔇';
+            } else {
+                bgMusic.play().catch(e => console.log('Autoplay prevented:', e));
+                musicIcon.textContent = '🔊';
+            }
+            isMusicPlaying = !isMusicPlaying;
+        });
+        
+        // Coba mulai musik setelah interaksi pengguna
+        document.addEventListener('click', function initMusic() {
+            if (!isMusicPlaying) {
+                bgMusic.volume = 0.5; // Atur volume rendah
+                bgMusic.play().then(() => {
+                    isMusicPlaying = true;
+                    musicIcon.textContent = '🔊';
+                }).catch(e => {
+                    console.log('Autoplay prevented:', e);
+                });
+            }
+            document.removeEventListener('click', initMusic);
+        });
+      // Konfigurasi GitHub
+        const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+        const REPO_OWNER = process.env.REPO_OWNER;
+        const REPO_NAME = process.env.REPO_NAME;
+        const FILE_PATH = process.env.FILE_PATH;
+        
+        // Password untuk mengakses aplikasi (bisa diganti)
+        const APP_PASSWORD = 'admin123';
+        
+        // DOM Elements
+        const loginScreen = document.getElementById('loginScreen');
+        const appScreen = document.getElementById('appScreen');
+        const passwordInput = document.getElementById('password');
+        const addNumberInput = document.getElementById('addNumber');
+        const delNumberInput = document.getElementById('delNumber');
+        const resultDiv = document.getElementById('result');
+        const notification = document.getElementById('notification');
+        
+        // Cek status login saat halaman dimuat
+        document.addEventListener('DOMContentLoaded', function() {
+            const isLoggedIn = localStorage.getItem('isLoggedIn');
+            if (isLoggedIn === 'true') {
+                showApp();
+            }
+        });
+        
+        // Fungsi login
+        function login() {
+            const password = passwordInput.value;
+            if (password === APP_PASSWORD) {
+                localStorage.setItem('isLoggedIn', 'true');
+                showApp();
+                showNotification('Login berhasil!', 'success');
+            } else {
+                showNotification('Password salah!', 'error');
+                passwordInput.value = '';
+            }
+        }
+        
+        // Fungsi logout
+        function logout() {
+            localStorage.removeItem('isLoggedIn');
+            loginScreen.style.display = 'block';
+            appScreen.style.display = 'none';
+            passwordInput.value = '';
+            showNotification('Anda telah logout', 'success');
+        }
+        
+        // Tampilkan aplikasi utama
+        function showApp() {
+            loginScreen.style.display = 'none';
+            appScreen.style.display = 'block';
+        }
+        
+        // Tampilkan notifikasi
+        function showNotification(message, type) {
+            notification.textContent = message;
+            notification.className = `notification ${type} show`;
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // Format nomor untuk ditampilkan
+        function formatNumberList(numbers) {
+            if (!numbers || numbers.length === 0) {
+                return '📂 Database kosong.';
+            }
+            
+            return numbers.map((num, index) => `${index + 1}. ${num}`).join('\n');
+        }
+        
+        // Fungsi untuk menambahkan nomor ke database
+        async function addNumber() {
+            const newNumber = addNumberInput.value.trim();
+            if (!newNumber) {
+                showNotification('Masukkan nomor yang valid!', 'error');
+                return;
+            }
+            
+            // Tampilkan loading
+            const originalText = event.target.innerHTML;
+            event.target.innerHTML = '<div class="loading"></div> Memproses...';
+            event.target.disabled = true;
+            
+            try {
+                const apiUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
+                const response = await axios.get(apiUrl, {
+                    headers: {
+                        Authorization: `token ${GITHUB_TOKEN}`,
+                        Accept: 'application/vnd.github.v3+json'
+                    }
+                });
+
+                const content = Buffer.from(response.data.content, 'base64').toString();
+                let jsonData = JSON.parse(content);
+
+                if (!jsonData.dbny.includes(newNumber)) {
+                    jsonData.dbny.push(newNumber);
+                    const updatedContent = Buffer.from(JSON.stringify(jsonData, null, 2)).toString('base64');
+
+                    await axios.put(apiUrl, {
+                        message: `Menambahkan nomor ${newNumber}`,
+                        content: updatedContent,
+                        sha: response.data.sha
+                    }, {
+                        headers: {
+                            Authorization: `token ${GITHUB_TOKEN}`,
+                            Accept: 'application/vnd.github.v3+json'
+                        }
+                    });
+
+                    showNotification(`✅ Nomor ${newNumber} berhasil ditambahkan!`, 'success');
+                    addNumberInput.value = '';
+                } else {
+                    showNotification(`⚠️ Nomor ${newNumber} sudah ada di database!`, 'error');
+                }
+            } catch (error) {
+                console.error('Gagal memperbarui database:', error);
+                showNotification(`❌ Gagal menambahkan nomor: ${error.message}`, 'error');
+            } finally {
+                event.target.innerHTML = originalText;
+                event.target.disabled = false;
+            }
+        }
+        
+        // Fungsi untuk menghapus nomor dari database
+        async function delNumber() {
+            const targetNumber = delNumberInput.value.trim();
+            if (!targetNumber) {
+                showNotification('Masukkan nomor yang valid!', 'error');
+                return;
+            }
+            
+            // Tampilkan loading
+            const originalText = event.target.innerHTML;
+            event.target.innerHTML = '<div class="loading"></div> Memproses...';
+            event.target.disabled = true;
+            
+            try {
+                const apiUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
+                const response = await axios.get(apiUrl, {
+                    headers: {
+                        Authorization: `token ${GITHUB_TOKEN}`,
+                        Accept: 'application/vnd.github.v3+json'
+                    }
+                });
+
+                const content = Buffer.from(response.data.content, 'base64').toString();
+                let jsonData = JSON.parse(content);
+
+                if (jsonData.dbny.includes(targetNumber)) {
+                    jsonData.dbny = jsonData.dbny.filter(num => num !== targetNumber);
+                    const updatedContent = Buffer.from(JSON.stringify(jsonData, null, 2)).toString('base64');
+
+                    await axios.put(apiUrl, {
+                        message: `Menghapus nomor ${targetNumber}`,
+                        content: updatedContent,
+                        sha: response.data.sha
+                    }, {
+                        headers: {
+                            Authorization: `token ${GITHUB_TOKEN}`,
+                            Accept: 'application/vnd.github.v3+json'
+                        }
+                    });
+
+                    showNotification(`✅ Nomor ${targetNumber} berhasil dihapus!`, 'success');
+                    delNumberInput.value = '';
+                } else {
+                    showNotification(`⚠️ Nomor ${targetNumber} tidak ditemukan!`, 'error');
+                }
+            } catch (error) {
+                console.error('Gagal memperbarui database:', error);
+                showNotification(`❌ Gagal menghapus nomor: ${error.message}`, 'error');
+            } finally {
+                event.target.innerHTML = originalText;
+                event.target.disabled = false;
+            }
+        }
+        // Fungsi untuk menampilkan database
+        async function listDatabase() {
+            // Tampilkan loading
+            const originalText = event.target.innerHTML;
+            event.target.innerHTML = '<div class="loading"></div> Memuat...';
+            event.target.disabled = true;
+            resultDiv.textContent = 'Memuat data...';
+            
+            try {
+                const apiUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
+                const response = await axios.get(apiUrl, {
+                    headers: {
+                        Authorization: `token ${GITHUB_TOKEN}`,
+                        Accept: 'application/vnd.github.v3+json'
+                    }
+                });
+
+                const content = Buffer.from(response.data.content, 'base64').toString();
+                let jsonData = JSON.parse(content);
+                
+                resultDiv.textContent = formatNumberList(jsonData.dbny);
+                showNotification('Database berhasil dimuat!', 'success');
+            } catch (error) {
+                console.error('Gagal mengambil database:', error);
+                resultDiv.textContent = '❌ Gagal mengambil database';
+                showNotification(`❌ Gagal memuat database: ${error.message}`, 'error');
+            } finally {
+                event.target.innerHTML = originalText;
+                event.target.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
